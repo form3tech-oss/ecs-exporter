@@ -176,6 +176,10 @@ func (e *ECSClient) GetClusterServices(cluster *types.ECSCluster) ([]*types.ECSS
 					RunningT: aws.Int64Value(s.RunningCount),
 					PendingT: aws.Int64Value(s.PendingCount),
 				}
+				if s.DeploymentConfiguration != nil {
+					es.DeploymentConfiguration.MinimumHealthyPercent = aws.Int64Value(s.DeploymentConfiguration.MinimumHealthyPercent)
+					es.DeploymentConfiguration.MaximumPercent = aws.Int64Value(s.DeploymentConfiguration.MaximumPercent)
+				}
 				ss = append(ss, es)
 			}
 

@@ -83,12 +83,27 @@ func TestCollectClusterServiceMetrics(t *testing.T) {
 
 	testC := &types.ECSCluster{ID: "c1", Name: "cluster1"}
 	testSs := []*types.ECSService{
-		&types.ECSService{ID: "s1", Name: "service1", DesiredT: 10, PendingT: 5, RunningT: 5},
-		&types.ECSService{ID: "s2", Name: "service2", DesiredT: 15, PendingT: 5, RunningT: 10},
-		&types.ECSService{ID: "s3", Name: "service3", DesiredT: 30, PendingT: 27, RunningT: 0},
-		&types.ECSService{ID: "s4", Name: "service4", DesiredT: 51, PendingT: 50, RunningT: 1},
-		&types.ECSService{ID: "s5", Name: "service5", DesiredT: 109, PendingT: 99, RunningT: 2},
-		&types.ECSService{ID: "s6", Name: "service6", DesiredT: 6431, PendingT: 5000, RunningT: 107},
+		{ID: "s1", Name: "service1", DesiredT: 10, PendingT: 5, RunningT: 5, DeploymentConfiguration: types.ECSDeploymentConfiguration{
+			MinimumHealthyPercent: 0,
+			MaximumPercent:        100,
+		}},
+		{ID: "s2", Name: "service2", DesiredT: 15, PendingT: 5, RunningT: 10, DeploymentConfiguration: types.ECSDeploymentConfiguration{
+			MinimumHealthyPercent: 50,
+			MaximumPercent:        100,
+		}},
+		{ID: "s3", Name: "service3", DesiredT: 30, PendingT: 27, RunningT: 0, DeploymentConfiguration: types.ECSDeploymentConfiguration{
+			MinimumHealthyPercent: 99,
+			MaximumPercent:        100,
+		}},
+		{ID: "s4", Name: "service4", DesiredT: 51, PendingT: 50, RunningT: 1, DeploymentConfiguration: types.ECSDeploymentConfiguration{
+			MinimumHealthyPercent: 50,
+			MaximumPercent:        200,
+		}},
+		{ID: "s5", Name: "service5", DesiredT: 109, PendingT: 99, RunningT: 2, DeploymentConfiguration: types.ECSDeploymentConfiguration{
+			MinimumHealthyPercent: 0,
+			MaximumPercent:        200,
+		}},
+		{ID: "s6", Name: "service6", DesiredT: 6431, PendingT: 5000, RunningT: 107},
 	}
 	// Collect mocked metrics
 	go func() {
@@ -141,6 +156,28 @@ func TestCollectClusterServiceMetrics(t *testing.T) {
 			t.Errorf("expected %f service_running_tasks, got %f", want, m2.value)
 		}
 		expected = `Desc{fqName: "ecs_service_running_tasks", help: "The number of tasks in the cluster that are in the RUNNING state regarding a service", constLabels: {}, variableLabels: [region cluster service]}`
+		if expected != m.Desc().String() {
+			t.Errorf("expected '%s', \ngot '%s'", expected, m.Desc().String())
+		}
+
+		m = (<-ch).(prometheus.Metric)
+		m2 = readGauge(m)
+		want = float64(wantS.DeploymentConfiguration.MinimumHealthyPercent)
+		if m2.value != want {
+			t.Errorf("expected %f service_minimum_healthy_percent, got %f", want, m2.value)
+		}
+		expected = `Desc{fqName: "ecs_service_minimum_healthy_percent", help: "The lower limit (as a percentage of the service's desiredCount) of the number of running tasks that must remain in the RUNNING state in a service during a deployment", constLabels: {}, variableLabels: [region cluster service]}`
+		if expected != m.Desc().String() {
+			t.Errorf("expected '%s', \ngot '%s'", expected, m.Desc().String())
+		}
+
+		m = (<-ch).(prometheus.Metric)
+		m2 = readGauge(m)
+		want = float64(wantS.DeploymentConfiguration.MaximumPercent)
+		if m2.value != want {
+			t.Errorf("expected %f service_maximum_percent, got %f", want, m2.value)
+		}
+		expected = `Desc{fqName: "ecs_service_maximum_percent", help: "The upper limit (as a percentage of the service's desiredCount) of the number of tasks that are allowed in the RUNNING or PENDING state in a service during a deployment", constLabels: {}, variableLabels: [region cluster service]}`
 		if expected != m.Desc().String() {
 			t.Errorf("expected '%s', \ngot '%s'", expected, m.Desc().String())
 		}

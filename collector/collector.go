@@ -59,6 +59,18 @@ var (
 		[]string{"region", "cluster", "service"}, nil,
 	)
 
+	serviceMinimumHealthyPercent = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "service_minimum_healthy_percent"),
+		"The lower limit (as a percentage of the service's desiredCount) of the number of running tasks that must remain in the RUNNING state in a service during a deployment",
+		[]string{"region", "cluster", "service"}, nil,
+	)
+
+	serviceMaximumPercent = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "service_maximum_percent"),
+		"The upper limit (as a percentage of the service's desiredCount) of the number of tasks that are allowed in the RUNNING or PENDING state in a service during a deployment",
+		[]string{"region", "cluster", "service"}, nil,
+	)
+
 	//  Container instances metrics
 	cInstanceCount = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "container_instances"),
@@ -263,6 +275,12 @@ func (e *Exporter) collectClusterServicesMetrics(ctx context.Context, ch chan<- 
 
 		// Running task count
 		sendSafeMetric(ctx, ch, prometheus.MustNewConstMetric(serviceRunning, prometheus.GaugeValue, float64(s.RunningT), e.region, cluster.Name, s.Name))
+
+		// Minimum healthy percent
+		sendSafeMetric(ctx, ch, prometheus.MustNewConstMetric(serviceMinimumHealthyPercent, prometheus.GaugeValue, float64(s.DeploymentConfiguration.MinimumHealthyPercent), e.region, cluster.Name, s.Name))
+
+		// Maximum percent
+		sendSafeMetric(ctx, ch, prometheus.MustNewConstMetric(serviceMaximumPercent, prometheus.GaugeValue, float64(s.DeploymentConfiguration.MaximumPercent), e.region, cluster.Name, s.Name))
 	}
 }
 
